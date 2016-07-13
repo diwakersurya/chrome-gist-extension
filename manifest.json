@@ -1,0 +1,30 @@
+{
+  "manifest_version": 2,
+  "name": "save to gist",
+  "version": "0.1",
+  "browser_action": {
+    "default_icon": "icon-48.png",
+    "default_title": "Extension for saving content to Github Gists.",
+    "default_popup": "popup.html"
+  },
+  "icons": { "16": "icon-16.png",
+             "48": "icon-48.png",
+            "128": "icon-128.png" },
+  "permissions": [
+           "tabs",
+           "contextMenus",
+           "storage"
+         ],
+  "content_scripts": [
+  {
+    "matches": [
+      "<all_urls>"
+    ],
+    "js": ["content.js"]
+  }],
+  "background": {
+    "scripts": ["background.js","jsAjax.js"],
+    "persistent":false
+  }
+
+}
