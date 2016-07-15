@@ -8,10 +8,10 @@ chrome.runtime.onInstalled.addListener(
         //add context menu when the extension is installed
         var parent = chrome.contextMenus.create({
             "title": "Add to Gist as",
-            "id":"chrome-gist-extension-menu",
+            "id": "chrome-gist-extension-menu",
             "contexts": ["selection"]
         });
-        var javascript = chrome.contextMenus.create({
+        /* var javascript = chrome.contextMenus.create({
             "title": "js",
             "parentId": parent,
             "id": "js",
@@ -53,9 +53,11 @@ chrome.runtime.onInstalled.addListener(
             "id": "py",
             "contexts": ["selection"],
         });
-
+*/
 
     });
+
+var data = {};
 var clickHandler = function(info, tab) {
     var d = new Date();
     var curr_date = d.getDate();
@@ -66,38 +68,27 @@ var clickHandler = function(info, tab) {
     var curr_seconds = d.getSeconds();
     var partFileName = curr_date + "_" + curr_month + "_" + curr_year + "_" + curr_hours + "_" + curr_minutes + "_" + curr_seconds;
 
-    var files = {};
-    var filename = "cge_" + partFileName + "." + info.menuItemId;
-    files[filename] = {
-        content: info.selectionText
-    };
-    var gistObject = {
-        "description": "This is random ." + info.menuItemId + " gist created by chrome-gist-extension. Url for the same is " + tab.url,
-        "public": false,
-        "files": files
-    }
-    getAccessToken(function(err, access_token) {
-        if (err) {
-            return;
-        }
-        gistObject = JSON.stringify(gistObject);
-        var url = githubbaseURL + "gists?access_token=" + access_token;
-        var options = {
-            method: "POST",
-            url: url,
-            successCallback: function(result) {
-                alert("Gist created successfully!! :D");
-            },
-            errorCallback: function(result) {
-                alert("Gist creation error!! :(");
-            },
-            data: gistObject,
-        };
-        jsAjax.request(options);
+    data.filename = "cge_" + partFileName + "." + info.menuItemId;
+    data.content = info.selectionText;
+    data.url = tab.url;
+
+    //show modal here to provide different options.
+    chrome.tabs.insertCSS(tab.id, {
+        file: "dialog.css"
+    }, function() {
+        chrome.tabs.executeScript(tab.id, {
+            file: "dialog.js"
+        }, function() {
+            chrome.tabs.sendMessage(tab.id, {
+                "message": "GOT_GIST_DATA",
+                "tab_id": currentTab.id
+            });
+        });
+        //  return;
 
     });
-
 }
+
 chrome.contextMenus.onClicked.addListener(clickHandler);
 
 
@@ -122,6 +113,38 @@ chrome.runtime.onMessage.addListener(
                     alert("error occured while saving the token");
                 }
                 chrome.tabs.remove(request.tab_id);
+            });
+        } else if (request.message === "SAVE_GIST") {
+            var files = {};
+            var filename=(request.name || data.filename) +"."+ (request.type || "txt")
+            files[filename] = {
+                content: data.content
+            };
+
+            var gistObject = {
+                "description": request.description + " Source URL is " + data.url,
+                "public": false,
+                "files": files
+            }
+            getAccessToken(function(err, access_token) {
+                if (err) {
+                    return;
+                }
+                gistObject = JSON.stringify(gistObject);
+                alert(gistObject);
+                var url = githubbaseURL + "gists?access_token=" + access_token;
+                var options = {
+                    method: "POST",
+                    url: url,
+                    successCallback: function(result) {
+                        alert("Gist created successfully!! :D");
+                    },
+                    errorCallback: function(result) {
+                        alert("Gist creation error!! :(");
+                    },
+                    data: gistObject,
+                };
+                jsAjax.request(options);
             });
         }
     });
